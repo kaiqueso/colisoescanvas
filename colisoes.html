@@ -1,0 +1,230 @@
+<html>
+	<head>
+            <script>
+				// https://spicyyoghurt.com/tutorials/html5-javascript-game-development/collision-detection-physics
+
+				var canvas, ctx;
+				var time;
+				var isDrawArrows=false; 
+				var isAutoPause=false;
+				
+				class Bola {
+				
+					constructor(pos, radius, vel, name, color){
+						this.pos = pos;
+						this.radius = radius;
+						this.vel= vel;
+						this.name=name;
+						this.color = color;
+						this.mass = (Math.PI*this.radius*this.radius)/1000;
+						console.log(name, this.mass);
+					}
+					draw() {
+						ctx.lineWidth = 1;
+						ctx.lineJoin = ctx.lineCap = 'round';
+						ctx.shadowBlur = 5;
+						ctx.shadowColor = 'rgb(0, 0, 0)';
+				
+						ctx.beginPath();
+						ctx.arc(this.pos.x, this.pos.y, this.radius, 0, 2 * Math.PI, false);
+						ctx.fillStyle = this.color;
+						ctx.fill();
+						ctx.strokeStyle = "black";
+						ctx.font = "20px Arial";
+						ctx.fillStyle = "#fff";
+						ctx.fillText(this.name, this.pos.x - 6, this.pos.y + 5);
+				
+						if(isDrawArrows)
+							this.drawArrow();
+				
+						this.checkLimitCollision();
+					}
+					checkLimitCollision(){
+						if (this.pos.x + this.radius > canvas.width){
+							this.pos.x = canvas.width-this.radius;
+							this.vel.x = -this.vel.x;
+						}else
+						if(this.pos.x - this.radius < 0){
+							this.pos.x = this.radius;
+							this.vel.x = -this.vel.x;
+						}
+						else if (this.pos.y + this.radius > canvas.height) {
+							this.pos.y = canvas.height - this.radius
+							this.vel.y = -this.vel.y;
+						}
+						else 
+						if (this.pos.y - this.radius < 0) {
+							this.pos.y = this.radius
+							this.vel.y = -this.vel.y;
+						}
+				
+						this.pos.x += this.vel.x;
+						this.pos.y += this.vel.y;        
+					}
+					
+					drawArrow() {
+				
+						let fromx = this.pos.x;
+						let fromy = this.pos.y;
+						let tox   = this.pos.x + this.vel.x * 20;
+						let toy   = this.pos.y + this.vel.y * 20;
+					
+						var helden = 15;
+						var angle = Math.atan2(toy - fromy, tox - fromx);
+						ctx.moveTo(fromx, fromy);
+						ctx.lineTo(tox, toy);
+						ctx.lineTo(tox - helden * Math.cos(angle - Math.PI / 6), toy - helden * Math.sin(angle - Math.PI / 6));
+						ctx.moveTo(tox, toy);
+						ctx.lineTo(tox - helden * Math.cos(angle + Math.PI / 6), toy - helden * Math.sin(angle + Math.PI / 6));
+						ctx.stroke();
+					}   
+				
+				}
+				
+				var branca = new Bola({x:1000,y:300}, 35, {x:7,y:1},"","white");
+				
+				var bola3 = new Bola({x:100,y:100},30, {x:0,y:0},"3","red");
+				var bola6 = new Bola({x:200,y:200},30, {x:0,y:0},"6","green");
+				var bola2 = new Bola({x:300,y:300},30, {x:0,y:0},"2","blue");
+				var bola8 = new Bola({x:200,y:400},30, {x:0,y:0},"8","black");
+				var bola9 = new Bola({x:100,y:500},30, {x:0,y:0},"9","yellow");
+				
+				var bolas = [branca, bola3, bola6, bola2, bola8, bola9];
+				
+				
+				function init() {
+					canvas = document.getElementById("mesaSinuca");
+					ctx = canvas.getContext("2d");
+					animate();
+				}
+				
+				function animate() {
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
+					time = requestAnimationFrame(animate);
+					for (const bola of bolas) {
+						bola.draw();
+					}
+				
+					for (let i = 0; i < bolas.length; i++) {
+						let b1 = bolas[i];
+						for (let j = i+1; j < bolas.length; j++){
+						   let b2 = bolas[j];
+						   collisions(b1, b2);
+						}
+						
+					}
+				
+				}
+				
+				
+				
+				function collisions(a, b) {
+					
+					var dx = b.pos.x - a.pos.x; //distance between x
+					var dy = b.pos.y - a.pos.y; // distance between y
+					var distance = Math.sqrt(dx * dx + dy * dy); //Pythagoream Theory
+					var minDistance = a.radius + b.radius;
+					// COLLISION CODES HERE NEW DIRECTION 
+				
+					if (  distance  <  minDistance  ) {
+				
+						var angle = Math.atan2(dy, dx);
+						var disperse = minDistance - distance;
+						var ax = disperse *  Math.cos(angle);
+						var ay = disperse * Math.sin(angle);
+				
+						// solve collision (separation)
+						a.pos.x -= ax;
+						a.pos.y -= ay;
+				
+						// give a punch to the speed
+						a.vel.x -= b.mass * Math.cos(angle);
+						a.vel.y -= b.mass * Math.sin(angle);
+						
+						b.vel.x += a.mass *  Math.cos(angle);
+						b.vel.y += a.mass *  Math.sin(angle);
+				
+						// darw point colission
+						var collisionPointX = ((a.pos.x * b.radius) + (b.pos.x * a.radius)) / (a.radius + b.radius);
+						var collisionPointY = ((a.pos.y * b.radius) + (b.pos.y * a.radius)) / (a.radius + b.radius);
+						ctx.save();
+						ctx.beginPath();
+						ctx.arc(collisionPointX, collisionPointY, 10, 0, 2 * Math.PI, false);
+						ctx.fillStyle = "yellow";
+						ctx.fill();
+				
+						if(isDrawArrows){
+							ctx.strokeStyle = "orange";
+							ctx.lineWidth = 3;
+							a.drawArrow(ctx);
+							b.drawArrow(ctx);
+							ctx.stroke();
+							ctx.restore();
+						}
+
+						if(isAutoPause)
+							pause(2000)
+				
+					}
+				}
+				
+				function startStop() {
+					if (time === -1)
+						animate();
+					else
+						stop();
+				}
+
+				function stop() {
+					window.cancelAnimationFrame(time);
+					time = -1;
+				}
+
+				function pause(t) {
+					startStop();
+					console.log('Houve uma colisao...');
+					setTimeout(startStop, t);
+				}
+
+				function autoPause(){
+					isAutoPause=!isAutoPause;
+					var inputPause = document.getElementById('inputPause');
+
+					if(isAutoPause){
+						inputPause.style.background = 'green';
+					} else {
+						inputPause.style.background = 'white';
+					}
+				}
+				
+				function showHideArrows(){
+					isDrawArrows = !isDrawArrows;
+
+					var arrows = document.getElementById('arrows');
+
+					if(isDrawArrows){
+						arrows.style.background = 'green';
+					} else {
+						arrows.style.background = 'white';
+					}
+				}
+
+				function addBall() {
+					var newBola = new Bola({x:100,y:100},30, {x:0,y:0},"","brown");
+					bolas.push(newBola);
+				}
+			</script>
+	</head>
+
+	<body onload="init()">
+		<canvas id= "mesaSinuca" style="border: 15px solid darkgreen; background-color: cadetblue;" height="600" width="1000"></canvas>
+
+		
+		<input type="button" id="arrows" value="Arrows!" onclick="showHideArrows();">
+		<!-- Adicione o botão embaixo deste comentário-->
+		<input type="button" value="StartStop!" onclick="startStop();">
+		<input type="button" id="inputPause" value="Auto pause!" onclick="autoPause();">
+		<input type="button" value="add Bola!" onclick="addBall();">
+		
+	</body>
+</html>
